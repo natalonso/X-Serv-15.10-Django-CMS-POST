@@ -12,10 +12,13 @@ formulario = """
     <input type="submit" value="Enviar">
 </form>
 """
+
+
 @csrf_exempt
 def home_anotated(request): #PAGINA PRINCIPAL
 
     if request.method == 'POST':
+
         newpage= Page(name=request.POST['name'], page=request.POST['page'])
         newpage.save()
 
@@ -86,21 +89,48 @@ def pagina(request, pagina):
     else:
         return HttpResponse(salida)
 
-
 @csrf_exempt
-def edit(request, pagina):
+def edit(request, nombre):
 
-    lista = Page.objects.all()
-    for elemento in lista:
-        if elemento.name == pagina:
-            salida = elemento.page
-            break
+    if request.method == 'POST':
+
+        if request.user.is_authenticated():
+            logged = 'Logged in as: ' + request.user.username
+            permiso = True
         else:
-            salida = None
-    if salida == None:
-        return HttpResponse('Lo sentimos. La pagina no esta en la base de datos por el momento.')
+            logged = 'Not logged in.'
+            permiso = False
+
+        lista = Page.objects.all()
+        for elemento in lista:
+            if elemento.name == nombre:
+                salida = elemento.page
+                break
+            else:
+                salida = None
+        if salida == None:
+            if permiso == True:
+                newpage= Page(name=nombre, page=request.POST['page'])
+                newpage.save()
+                return HttpResponse('La pagina no estaba en nuestra BD, ha sido añadida.' + "<form action='' method='POST'>Nuevo contenido:<br><input type='text' name='page' placeholder='" + str(elemento.page) + "'><br><input type='submit' value='Enviar'></form>")
+            else:
+                return HttpResponse("No estás autenticado.<br><a href='/login'>Login</a><br><br>")
+        else:
+            if permiso == True:
+                elemento.page = request.POST['page']
+                elemento.save()
+                return HttpResponse("ACTUALIZADO" + "<form action='' method='POST'>Nuevo contenido:<br><input type='text' name='page' placeholder='" + str(elemento.page) + "'><br><input type='submit' value='Enviar'></form>")
+            else:
+                return HttpResponse("No estas autenticado.<br><a href='/login'>Login</a><br><br>")
     else:
-        #FUNCIONALIDAD DEL FORMULARIO. SI EL RECURSO EXISTE SE MANDA EL FORMULARIO.
-        #SE ENVIARA UN POST Y SE EDITARA EL RECURSO EN LA BASE DE DATOS.
-        #MODIFICAR A PARTIR DE AQUI.
-        return HttpResponse(formulario)
+        lista = Page.objects.all()
+        for elemento in lista:
+            if elemento.name == pagina:
+                salida = elemento.page
+                break
+            else:
+                salida = None
+        if salida == None:
+            return HttpResponse("<form action='' method='POST'>Nuevo contenido:<br><input type='text' name='page'><br><input type='submit' value='Enviar'></form>")
+        else:
+            return HttpResponse("<form action='' method='POST'>Nuevo contenido:<br><input type='text' name='page' placeholder='" + str(elemento.page) + "'><br><input type='submit' value='Enviar'></form>")
